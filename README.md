@@ -39,7 +39,11 @@ Dự án Hệ thống Backend API quản lý Cửa hàng Cà phê, được phá
    cd your-repo-name
    ```
 
-2. **Cấu hình Cơ sở dữ liệu & Email & Google:**
+2. **Khởi tạo Cơ sở dữ liệu:**
+   - Mở SQL Server Management Studio (SSMS).
+   - Mở file `coffee_shop_sqlserver.sql` đính kèm trong dự án và bấm **Execute** để tạo cấu trúc cơ sở dữ liệu.
+
+3. **Cấu hình Cơ sở dữ liệu & Email & Google:**
    Mở file `src/main/resources/application.properties` và cấu hình lại thông số SQL Server, Email và Google Client Credentials của bạn:
    ```properties
    spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=coffee_shop;encrypt=true;trustServerCertificate=true
