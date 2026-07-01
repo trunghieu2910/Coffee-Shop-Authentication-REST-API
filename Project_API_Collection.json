@@ -1,402 +1,689 @@
 {
   "info": {
-    "name": "Project_HSF302_Group2 API Tests",
-    "description": "Bộ API đầy đủ để test luồng Đăng nhập, Đăng ký, Quên mật khẩu và Cập nhật Profile",
+    "name": "Coffee Shop API - Full Test Suite (HSF302 Group 2)",
+    "description": "# 📋 Coffee Shop API - Full Test Suite\n\n**Author:** Nguyễn Trung Hiếu  \n**Project:** HSF302 Group 2 - Coffee Shop REST API  \n**Base URL:** `http://localhost:8080`\n\n---\n\n## 🚀 Hướng dẫn sử dụng\n\n### BƯỚC 1: Khởi động Server\nChạy lệnh trong thư mục dự án:\n```\nmvn spring-boot:run\n```\nServer sẽ khởi động tại: `http://localhost:8080`\n\n### BƯỚC 2: Thiết lập biến môi trường (Variables)\nCollection này sử dụng 2 biến:\n- `{{base_url}}` = `http://localhost:8080`  \n- `{{jwt_token}}` = *(Tự động điền sau khi đăng nhập thành công)*\n\n### BƯỚC 3: Chạy test theo thứ tự từ trên xuống dưới\n\n---\n\n## 🔑 Hướng dẫn lấy Google idToken để test\n\n> ⚠️ **Lưu ý:** Google idToken KHÔNG THỂ lấy từ Postman trực tiếp vì nó yêu cầu một giao diện web thật. Bạn cần thực hiện các bước sau:\n\n**Cách 1 (Đơn giản nhất - Dùng Google OAuth2 Playground):**\n1. Truy cập: https://developers.google.com/oauthplayground\n2. Nhấn biểu tượng ⚙️ (Settings) ở góc trên phải\n3. Tích chọn **\"Use your own OAuth credentials\"**\n4. Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` (lấy từ Google Cloud Console của bạn)\n5. Bên trái chọn mục **\"Google OAuth2 API v2\"** và tích chọn `https://www.googleapis.com/auth/userinfo.email` và `https://www.googleapis.com/auth/userinfo.profile`\n6. Bấm **\"Authorize APIs\"** → Đăng nhập tài khoản Google → Cho phép\n7. Bấm **\"Exchange authorization code for tokens\"**\n8. Copy giá trị **\"id_token\"** trong phần Response\n9. Dán chuỗi đó vào ô `idToken` trong request **TC_AUTH_03** hoặc **TC_AUTH_04**\n\n**Cách 2 (Dùng code HTML đơn giản):**\nTạo file `get_google_token.html` với nội dung sau và mở trên trình duyệt:\n```html\n<script src=\"https://accounts.google.com/gsi/client\" async></script>\n<div id=\"g_id_onload\"\n  data-client_id=\"YOUR_GOOGLE_CLIENT_ID\"\n  data-callback=\"handleCredentialResponse\">\n</div>\n<div class=\"g_id_signin\" data-type=\"standard\"></div>\n<p id=\"token\"></p>\n<script>\nfunction handleCredentialResponse(response) {\n  document.getElementById('token').innerText = response.credential;\n}\n</script>\n```\nSau khi đăng nhập, chuỗi idToken sẽ hiện ra trên trang web.\n\n---\n\n## 📊 Test Cases tương ứng với Excel Design\n\n| TC ID | Request Name | Expected Status |\n|-------|-------------|----------------|\n| TC_AUTH_01 | [TC_AUTH_01] Login - Valid Credentials | 200 |\n| TC_AUTH_02 | [TC_AUTH_02] Login - Wrong Password | 401 |\n| TC_AUTH_03 | [TC_AUTH_03] Google Login - New User | 200 |\n| TC_AUTH_04 | [TC_AUTH_04] Google Login - Fake Token | 401 |\n| TC_REG_01 | [TC_REG_01] Register - New Email | 200 |\n| TC_REG_02 | [TC_REG_02] Register - Duplicate Email | 400 |\n| TC_REG_03 | [TC_REG_03] Verify OTP - Valid | 200 |\n| TC_REG_04 | [TC_REG_04] Verify OTP - Invalid | 400 |\n| TC_PWD_01 | [TC_PWD_01] Forgot Password - Valid Email | 200 |\n| TC_PWD_02 | [TC_PWD_02] Forgot Password - Not Found | 404 |\n| TC_PWD_03 | [TC_PWD_03] Reset Password - Valid OTP | 200 |\n| TC_PWD_04 | [TC_PWD_04] Reset Password - Invalid OTP | 400 |\n| TC_USR_01 | [TC_USR_01] Get Profile - With Token | 200 |\n| TC_USR_02 | [TC_USR_02] Get Profile - No Token | 401 |\n| TC_USR_03 | [TC_USR_03] Change Password - Correct | 200 |\n| TC_USR_04 | [TC_USR_04] Change Password - Wrong Old Pass | 400 |\n| TC_USR_05 | [TC_USR_05] Complete Google Account | 200 |",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string",
+      "description": "Tự động điền sau khi chạy TC_AUTH_01 thành công"
+    }
+  ],
   "item": [
     {
-      "name": "1. Luồng Xác Thực (Auth)",
+      "name": "1. Authentication (Xác thực & Đăng nhập)",
+      "description": "Nhóm API xử lý việc Đăng nhập thường và Đăng nhập bằng Google",
       "item": [
         {
-          "name": "1. Đăng ký tài khoản (Register)",
+          "name": "[TC_AUTH_01] Login - Valid Credentials ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// TC_AUTH_01 - Tu dong luu token sau khi dang nhap thanh cong",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('jwt_token', jsonData.data.token);",
+                  "        console.log('✅ JWT Token saved:', jsonData.data.token.substring(0, 30) + '...');",
+                  "    }",
+                  "}",
+                  "pm.test('TC_AUTH_01 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_AUTH_01 - Response has token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "});",
+                  "pm.test('TC_AUTH_01 - Message is Login successful', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Login successful');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Nguyen\",\n  \"lastName\": \"Van A\",\n  \"username\": \"nva123\",\n  \"email\": \"dien_email_that_cua_ban@gmail.com\",\n  \"phone\": \"0912345678\",\n  \"password\": \"12345\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "http://localhost:8080/api/auth/register",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "register"
-              ]
-            }
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "**TC_AUTH_01 - Happy Path**\n\nĐăng nhập thành công với tài khoản và mật khẩu hợp lệ.\n\n**Pre-condition:** Tài khoản `admin` đã tồn tại trong Database.\n\n**Expected:** Status 200, trả về JWT Token.\n\n> 💡 **Tip:** Sau khi chạy request này thành công, JWT Token sẽ tự động được lưu vào biến `{{jwt_token}}` để dùng cho các request tiếp theo!"
           }
         },
         {
-          "name": "2. Xác minh Email (Verify OTP)",
+          "name": "[TC_AUTH_02] Login - Wrong Password ❌ Expect 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_AUTH_02 - Status is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('TC_AUTH_02 - Message is Invalid username or password', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Invalid username or password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"dien_email_that_cua_ban@gmail.com\",\n  \"otp\": \"MA_OTP_TRONG_EMAIL\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"sai_mat_khau_123\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "http://localhost:8080/api/auth/verify-email",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "verify-email"
-              ]
-            }
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "**TC_AUTH_02 - Negative Case**\n\nĐăng nhập thất bại do nhập sai mật khẩu.\n\n**Expected:** Status 401, message = `Invalid username or password`"
           }
         },
         {
-          "name": "3. Đăng nhập (Login)",
+          "name": "[TC_AUTH_03] Google Login - New User ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_AUTH_03 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_AUTH_03 - Response has token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"nva123\",\n  \"password\": \"12345\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"idToken\": \"DAN_GOOGLE_ID_TOKEN_CUA_BAN_VAO_DAY\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "http://localhost:8080/api/auth/login",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "login"
-              ]
-            }
+              "raw": "{{base_url}}/api/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google"]
+            },
+            "description": "**TC_AUTH_03 - Google Login (Happy Path)**\n\n## ⚠️ CÁCH LẤY GOOGLE idToken ĐỂ TEST\n\n### Phương pháp: Google OAuth2 Playground\n\n1. Truy cập: https://developers.google.com/oauthplayground\n2. Nhấn biểu tượng **⚙️ Settings** (góc trên phải)\n3. Tích chọn ✅ **\"Use your own OAuth credentials\"**\n4. Điền thông tin:\n   - **OAuth Client ID**: Lấy từ Google Cloud Console > Credentials\n   - **OAuth Client Secret**: Lấy từ Google Cloud Console > Credentials\n5. Ở cột bên trái, tìm và chọn **\"Google OAuth2 API v2\"**\n6. Tích chọn 2 scope:\n   - `https://www.googleapis.com/auth/userinfo.email`\n   - `https://www.googleapis.com/auth/userinfo.profile`\n7. Bấm **\"Authorize APIs\"** → Chọn tài khoản Google → Allow\n8. Bấm **\"Exchange authorization code for tokens\"**\n9. Trong phần **Response**, tìm và copy toàn bộ giá trị **`id_token`** (rất dài, bắt đầu bằng `eyJ`)\n10. Dán vào ô `idToken` trong phần Body của request này\n\n---\n\n**Pre-condition:** Google idToken hợp lệ, Email chưa tồn tại trong hệ thống.\n\n**Expected:** Status 200, tự động tạo tài khoản mới, trả về JWT Token."
           }
         },
         {
-          "name": "4. Gửi OTP Quên Mật Khẩu",
+          "name": "[TC_AUTH_04] Google Login - Fake Token ❌ Expect 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_AUTH_04 - Status is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('TC_AUTH_04 - Message is Invalid Google Token', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Invalid Google Token');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"dien_email_that_cua_ban@gmail.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"idToken\": \"day_la_token_gia_mao_khong_hop_le\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "http://localhost:8080/api/auth/forgot-password",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "forgot-password"
-              ]
-            }
-          }
-        },
-        {
-          "name": "5. Đặt lại Mật Khẩu (Reset Pass)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"dien_email_that_cua_ban@gmail.com\",\n  \"otp\": \"MA_OTP_TRONG_EMAIL\",\n  \"newPassword\": \"123456\",\n  \"confirmPassword\": \"123456\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{{base_url}}/api/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "google"]
             },
-            "url": {
-              "raw": "http://localhost:8080/api/auth/reset-password",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "reset-password"
-              ]
-            }
-          }
-        },
-        {
-          "name": "6. Đăng nhập bằng Google (Chung cho Cũ & Mới)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"idToken\": \"CHUOI_TOKEN_GOOGLE_CUA_FRONTEND\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:8080/api/auth/google",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "auth",
-                "google"
-              ]
-            }
+            "description": "**TC_AUTH_04 - Negative Case**\n\nĐăng nhập bằng Google thất bại do token giả mạo.\n\n**Expected:** Status 401, message = `Invalid Google Token`"
           }
         }
       ]
     },
     {
-      "name": "2. Luồng Người Dùng (Profile)",
+      "name": "2. Registration (Đăng ký tài khoản)",
       "item": [
         {
-          "name": "1. Lấy thông tin cá nhân (Profile)",
+          "name": "[TC_REG_01] Register - New Email ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_REG_01 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_REG_01 - OTP sent message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('OTP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Hieu\",\n  \"lastName\": \"Nguyen\",\n  \"username\": \"testuser01\",\n  \"email\": \"testuser01@gmail.com\",\n  \"phone\": \"0123456789\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "**TC_REG_01 - Happy Path**\n\nĐăng ký thành công với email chưa từng sử dụng.\n\n**Pre-condition:** Email `testuser01@gmail.com` chưa tồn tại trong DB.\n\n**Expected:** Status 200, OTP được gửi về email."
+          }
+        },
+        {
+          "name": "[TC_REG_02] Register - Duplicate Email ❌ Expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_REG_02 - Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('TC_REG_02 - Email already registered message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('already');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Hieu\",\n  \"lastName\": \"Nguyen\",\n  \"username\": \"testuser01\",\n  \"email\": \"testuser01@gmail.com\",\n  \"phone\": \"0123456789\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "**TC_REG_02 - Negative Case**\n\nĐăng ký thất bại do email đã tồn tại. Chạy TC_REG_01 trước để tạo email này.\n\n**Expected:** Status 400, message = `Email is already registered!`"
+          }
+        },
+        {
+          "name": "[TC_REG_03] Verify OTP - Valid ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_REG_03 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_REG_03 - Email verified message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('verified');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser01@gmail.com\",\n  \"otp\": \"DIEN_MA_OTP_NHAN_DUOC_TRONG_EMAIL\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/verify-email",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "verify-email"]
+            },
+            "description": "**TC_REG_03 - Happy Path**\n\nXác thực email thành công với mã OTP đúng.\n\n**Pre-condition:** Đã chạy TC_REG_01, OTP còn hiệu lực trong Cache.\n\n> ⚠️ Mở email `testuser01@gmail.com` để lấy mã OTP 6 chữ số, điền vào trường `otp`\n\n**Expected:** Status 200, tài khoản chuyển sang trạng thái ACTIVE."
+          }
+        },
+        {
+          "name": "[TC_REG_04] Verify OTP - Invalid/Expired ❌ Expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_REG_04 - Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('TC_REG_04 - Invalid OTP message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('Invalid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser01@gmail.com\",\n  \"otp\": \"000000\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/verify-email",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "verify-email"]
+            },
+            "description": "**TC_REG_04 - Negative Case**\n\nXác thực OTP thất bại do mã sai hoặc hết hạn.\n\n**Expected:** Status 400, message = `Invalid or expired OTP.`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Password Recovery (Quên mật khẩu)",
+      "item": [
+        {
+          "name": "[TC_PWD_01] Forgot Password - Valid Email ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_PWD_01 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_PWD_01 - OTP sent message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('OTP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password?email=testuser01@gmail.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "forgot-password"],
+              "query": [
+                { "key": "email", "value": "testuser01@gmail.com" }
+              ]
+            },
+            "description": "**TC_PWD_01 - Happy Path**\n\nGửi yêu cầu quên mật khẩu với email hợp lệ.\n\n**Pre-condition:** Email `testuser01@gmail.com` đang ACTIVE trong DB.\n\n**Expected:** Status 200, OTP được gửi về email."
+          }
+        },
+        {
+          "name": "[TC_PWD_02] Forgot Password - Email Not Found ❌ Expect 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_PWD_02 - Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('TC_PWD_02 - Email not found message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/forgot-password?email=khongtontai@gmail.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "forgot-password"],
+              "query": [
+                { "key": "email", "value": "khongtontai@gmail.com" }
+              ]
+            },
+            "description": "**TC_PWD_02 - Negative Case**\n\nGửi yêu cầu với email không tồn tại trong hệ thống.\n\n**Expected:** Status 404, message = `Email not found.`"
+          }
+        },
+        {
+          "name": "[TC_PWD_03] Reset Password - Valid OTP ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_PWD_03 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_PWD_03 - Password reset success message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('reset');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser01@gmail.com\",\n  \"otp\": \"DIEN_MA_OTP_NHAN_DUOC_TRONG_EMAIL\",\n  \"newPassword\": \"matkhaumoi123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/set-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "set-password"]
+            },
+            "description": "**TC_PWD_03 - Happy Path**\n\nĐặt lại mật khẩu thành công với OTP hợp lệ.\n\n**Pre-condition:** Đã chạy TC_PWD_01, OTP còn hiệu lực.\n\n> ⚠️ Mở email để lấy OTP và điền vào trường `otp`\n\n**Expected:** Status 200, mật khẩu được cập nhật thành công."
+          }
+        },
+        {
+          "name": "[TC_PWD_04] Reset Password - Invalid OTP ❌ Expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_PWD_04 - Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('TC_PWD_04 - Invalid OTP message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('Invalid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser01@gmail.com\",\n  \"otp\": \"000000\",\n  \"newPassword\": \"matkhaumoi123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/set-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "set-password"]
+            },
+            "description": "**TC_PWD_04 - Negative Case**\n\nĐặt lại mật khẩu thất bại do OTP sai.\n\n**Expected:** Status 400, message = `Invalid or expired OTP.`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. User Profile (Hồ sơ - Yêu cầu JWT Token)",
+      "description": "## ⚠️ Lưu ý quan trọng\n\nTất cả API trong nhóm này đều yêu cầu **JWT Token** trong Header.\n\n**Cách lấy Token:**\n1. Chạy request **[TC_AUTH_01] Login** trước\n2. Token sẽ tự động lưu vào biến `{{jwt_token}}`\n3. Tất cả request trong nhóm này đã được cấu hình dùng biến `{{jwt_token}}` tự động",
+      "item": [
+        {
+          "name": "[TC_USR_01] Get Profile - With Token ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_USR_01 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_USR_01 - Response has user data', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "});",
+                  "pm.test('TC_USR_01 - Response has email field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
-                {
-                  "key": "token",
-                  "value": "",
-                  "type": "string"
-                }
+                { "key": "token", "value": "{{jwt_token}}", "type": "string" }
               ]
             },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:8080/api/user/profile",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "user",
-                "profile"
-              ]
-            }
+              "raw": "{{base_url}}/api/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "**TC_USR_01 - Happy Path**\n\nLấy thông tin Profile thành công với JWT Token hợp lệ.\n\n**Pre-condition:** Đã chạy TC_AUTH_01 để có Token trong biến `{{jwt_token}}`.\n\n**Expected:** Status 200, trả về JSON chứa thông tin user."
           }
         },
         {
-          "name": "2. Đổi mật khẩu",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
+          "name": "[TC_USR_02] Get Profile - No Token ❌ Expect 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_USR_02 - Status is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"12345\",\n  \"newPassword\": \"matkhaumoi_123\",\n  \"confirmPassword\": \"matkhaumoi_123\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "http://localhost:8080/api/user/change-password",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "user",
-                "change-password"
-              ]
             }
-          }
-        },
-        {
-          "name": "3. Cập nhật hồ sơ (Upload ảnh)",
+          ],
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
+            "auth": { "type": "noauth" },
+            "method": "GET",
             "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "firstName",
-                  "value": "Hieu",
-                  "type": "text"
-                },
-                {
-                  "key": "lastName",
-                  "value": "Nguyen",
-                  "type": "text"
-                },
-                {
-                  "key": "phone",
-                  "value": "0999999999",
-                  "type": "text"
-                },
-                {
-                  "key": "imgFile",
-                  "type": "file",
-                  "src": []
-                }
-              ]
-            },
             "url": {
-              "raw": "http://localhost:8080/api/user/profile/edit",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "user",
-                "profile",
-                "edit"
-              ]
-            }
+              "raw": "{{base_url}}/api/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "**TC_USR_02 - Negative Case**\n\nBị từ chối truy cập Profile vì không có JWT Token.\n\n**Expected:** Status 401, Spring Security trả về lỗi Unauthorized."
           }
         },
         {
-          "name": "4. Hoàn thiện TK Google (Thêm SĐT, Pass)",
+          "name": "[TC_USR_03] Change Password - Correct Old Pass ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_USR_03 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_USR_03 - Password updated message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('updated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
-                {
-                  "key": "token",
-                  "value": "",
-                  "type": "string"
-                }
+                { "key": "token", "value": "{{jwt_token}}", "type": "string" }
               ]
             },
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phoneNumber\": \"0987654321\",\n  \"newPassword\": \"123456\",\n  \"confirmPassword\": \"123456\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"currentPassword\": \"123\",\n  \"newPassword\": \"456\",\n  \"confirmPassword\": \"456\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "http://localhost:8080/api/user/complete-google-account",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "user",
-                "complete-google-account"
-              ]
+              "raw": "{{base_url}}/api/user/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "change-password"]
+            },
+            "description": "**TC_USR_03 - Happy Path**\n\nĐổi mật khẩu thành công khi nhập đúng mật khẩu cũ.\n\n**Pre-condition:** Đã đăng nhập, token hợp lệ trong `{{jwt_token}}`.\n\n**Expected:** Status 200, mật khẩu được cập nhật."
+          }
+        },
+        {
+          "name": "[TC_USR_04] Change Password - Wrong Old Pass ❌ Expect 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_USR_04 - Status is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('TC_USR_04 - Incorrect password message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('Incorrect');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
             }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{jwt_token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"sai_mat_khau_cu\",\n  \"newPassword\": \"456\",\n  \"confirmPassword\": \"456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "change-password"]
+            },
+            "description": "**TC_USR_04 - Negative Case**\n\nĐổi mật khẩu thất bại do nhập sai mật khẩu cũ.\n\n**Expected:** Status 400, message = `Incorrect current password`"
+          }
+        },
+        {
+          "name": "[TC_USR_05] Complete Google Account ✅ Expect 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('TC_USR_05 - Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('TC_USR_05 - Account updated message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('updated');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                { "key": "token", "value": "{{jwt_token}}", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"0987654321\",\n  \"newPassword\": \"matkhaumoi123\",\n  \"confirmPassword\": \"matkhaumoi123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/user/complete-google-account",
+              "host": ["{{base_url}}"],
+              "path": ["api", "user", "complete-google-account"]
+            },
+            "description": "**TC_USR_05 - Happy Path**\n\nHoàn thiện thông tin tài khoản cho người dùng đăng nhập Google lần đầu (bổ sung SĐT và mật khẩu).\n\n**Pre-condition:** \n- Đã đăng nhập bằng Google (TC_AUTH_03)\n- Token lưu trong `{{jwt_token}}`\n- Tài khoản đang có `passwordHash = GOOGLE_OAUTH_DUMMY_HASH`\n\n**Expected:** Status 200, SĐT và mật khẩu được cập nhật, user có thể đăng nhập thường."
           }
         }
       ]

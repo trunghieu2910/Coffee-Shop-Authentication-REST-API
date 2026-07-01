@@ -44,7 +44,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    public SecurityFilterChain customerFilterChain(HttpSecurity http, ProfileCompletionFilter profileCompletionFilter) throws Exception {
+    public SecurityFilterChain customerFilterChain(HttpSecurity http) throws Exception {
 
         http
                 .securityMatcher("/**")
